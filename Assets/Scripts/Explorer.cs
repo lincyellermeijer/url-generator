@@ -4,6 +4,7 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 using SmartDLL;
+using System;
 
 public class Explorer : MonoBehaviour
 {
@@ -13,7 +14,11 @@ public class Explorer : MonoBehaviour
 
     public SmartFileExplorer fileExplorer = new SmartFileExplorer();
 
-    private bool readText = false;
+    private bool showText = false;
+
+    private int count = 0;
+    private string line;
+    List<string> productCodeList = new List<string>();
 
     void OnEnable()
     {
@@ -24,10 +29,10 @@ public class Explorer : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (fileExplorer.resultOK && readText)
+        if (fileExplorer.resultOK && showText)
         {
-            ReadText(fileExplorer.fileName);
-            readText = false;
+            ShowText(fileExplorer.fileName);
+            showText = false;
         }
     }
 
@@ -40,17 +45,48 @@ public class Explorer : MonoBehaviour
         string filter = "txt files (*.txt)|*.txt";
 
         fileExplorer.OpenExplorer(initialDir, restoreDir, title, defExt, filter);
-        readText = true;
+        showText = true;
     }
 
     void Generate()
     {
-        GenerateURL(fileExplorer.fileName, eText.text);
-        readText = true;
-        // productcode uitlezen en invullen
+        ReadText(fileExplorer.fileName);
+        WriteEmptyLine(fileExplorer.fileName);
+
+        for (int i = 0; i < productCodeList.Count; i++)
+        {
+            GenerateURL(fileExplorer.fileName, productCodeList[i]);
+        }
+
+        showText = true;
     }
 
     void ReadText(string path)
+    {
+        using (StreamReader reader = File.OpenText(path))
+        {
+            // read each line, ensuring not null (EOF)
+            while ((line = reader.ReadLine()) != null)
+            {
+                if (line != string.Empty)
+                {
+                    // Here instead of replacing array with new content
+                    // we add new words to already existing list of strings
+                    productCodeList.AddRange(line.Split(' '));
+                    count += 1;
+                }
+            }
+
+        }
+        // Count instead of Length because we're using List<T> now
+        for (int i = 0; i < productCodeList.Count; i++)
+        {
+            Debug.Log("\n " + productCodeList[i]);
+        }
+    }
+
+
+    void ShowText(string path)
     {
         eText.text = File.ReadAllText(path);
     }
@@ -59,9 +95,18 @@ public class Explorer : MonoBehaviour
     {
         //Write some text to the uploaded .txt file
         //StreamWriter writer = new StreamWriter(path, true);
-        using (StreamWriter writer = File.CreateText(path))
+        using (StreamWriter writer = File.AppendText(path))
         {
-            writer.WriteLine("https://www.123inkt.nl/images/products/" + productCode[0] + "/" + productCode[1] + "/" + productCode + "/" + productCode + "_1_big.jpg");
+                writer.WriteLine("https://www.123inkt.nl/images/products/" + productCode[0] + "/" + productCode[1] + "/" + productCode + "/" + productCode + "_1_big.jpg");
+                writer.Close();
+        }
+    }
+
+    void WriteEmptyLine(string path)
+    {
+        using (StreamWriter writer = File.AppendText(path))
+        {
+            writer.WriteLine("\n");
             writer.Close();
         }
     }
